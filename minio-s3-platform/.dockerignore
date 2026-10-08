@@ -1,0 +1,56 @@
+# MinIO S3 Platform - Docker Build Context Exclusions
+# ====================================================
+# Exclude files that should not be sent to Docker daemon
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Documentation (not needed in image)
+docs/
+*.md
+!README.md
+
+# GitHub workflows
+.github/
+
+# Backup files
+backup/
+*.backup
+*.bak
+*.tar.gz
+
+# Logs
+*.log
+logs/
+
+# Local development
+docker-compose.override.yml
+docker-compose.legacy.yml
+docker-compose.dhi.yml
+
+# Test files
+test/
+tests/
+*_test.go

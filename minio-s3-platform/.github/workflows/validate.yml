@@ -1,0 +1,144 @@
+# MinIO S3 Platform - CI Validation
+# ==================================
+# Validates project configuration files.
+# Does NOT contain production credentials.
+
+name: Validate
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-yaml:
+    name: Validate YAML
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Validate docker-compose.yml
+        run: yamllint -d relaxed docker-compose.yml
+
+      - name: Validate docker-compose.dhi.yml
+        run: yamllint -d relaxed docker-compose.dhi.yml
+
+      - name: Validate docker-compose.legacy.yml
+        run: yamllint -d relaxed docker-compose.legacy.yml
+
+      - name: Validate GitHub Actions
+        run: yamllint -d relaxed .github/workflows/*.yml
+
+  validate-json:
+    name: Validate JSON
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate policy JSON
+        run: |
+          for f in config/policies/*.json; do
+            echo "Validating: $f"
+            jq empty "$f"
+          done
+
+      - name: Validate lifecycle JSON
+        run: |
+          for f in config/lifecycle/*.json; do
+            echo "Validating: $f"
+            jq empty "$f"
+          done
+
+  validate-shell:
+    name: Validate Shell Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Validate shell scripts
+        run: |
+          for f in scripts/*.sh; do
+            echo "Checking: $f"
+            shellcheck -e SC1091 "$f"
+          done
+
+  validate-dockerfile:
+    name: Validate Dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+
+  validate-compose:
+    name: Validate Docker Compose
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create minimal .env for validation
+        run: |
+          echo "MINIO_ROOT_USER=testuser" > .env
+          echo "MINIO_ROOT_PASSWORD=testpassword123" >> .env
+
+      - name: Validate docker-compose config
+        run: docker compose config --quiet
+
+  build-test:
+    name: Build Test
+    runs-on: ubuntu-latest
+    needs: [validate-yaml, validate-json, validate-shell, validate-dockerfile, validate-compose]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create .env
+        run: |
+          cp .env.example .env
+          sed -i 's/CHANGE_THIS_STRONG_PASSWORD_MIN_12_CHARS/TestPassword123!/' .env
+          sed -i 's/CHANGE_THIS_DEVELOPER_PASSWORD/DevPassword123!/' .env
+
+      - name: Build Docker image
+        run: docker compose build
+
+      - name: Start services
+        run: |
+          docker compose up -d
+          sleep 30  # Wait for MinIO to start
+
+      - name: Health check
+        run: |
+          for i in {1..10}; do
+            if curl -sf http://localhost:9000/minio/health/live; then
+              echo "MinIO is healthy"
+              exit 0
+            fi
+            echo "Waiting for MinIO... ($i/10)"
+            sleep 10
+          done
+          echo "MinIO did not become healthy"
+          docker compose logs
+          exit 1
+
+      - name: Stop services
+        if: always()
+        run: docker compose down -v

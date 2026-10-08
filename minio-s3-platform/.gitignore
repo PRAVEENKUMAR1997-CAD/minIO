@@ -1,0 +1,54 @@
+# MinIO S3 Platform - Git Ignore
+# ===============================
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Backup files
+backup/
+*.backup
+*.bak
+*.tar.gz
+*.tar
+*.zip
+
+# Log files
+*.log
+logs/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-*
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Docker override (local customizations)
+docker-compose.override.yml
+
+# SSL/TLS certificates (if added locally)
+*.pem
+*.key
+*.crt
+*.p12
+certs/
+
+# Test artifacts
+test-output/
+coverage/

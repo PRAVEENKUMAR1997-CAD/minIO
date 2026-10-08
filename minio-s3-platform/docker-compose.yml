@@ -1,0 +1,89 @@
+# MinIO S3 Platform - Production Docker Compose
+# ==============================================
+# This is the primary deployment configuration.
+# Uses the locally-built MinIO image from source.
+#
+# Usage:
+#   ./scripts/start.sh           # Recommended
+#   docker compose up -d         # Direct
+#
+# Image Strategy: OPTION A - Built from MinIO source
+# For OPTION B (DHI) or OPTION C (Legacy), use override files.
+
+services:
+  minio:
+    # Build from local Dockerfile (MinIO from source)
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: minio-s3-platform:local
+    container_name: minio-server
+
+    # Restart policy for production reliability
+    restart: unless-stopped
+
+    # Environment configuration (loaded from .env)
+    environment:
+      # Root/Admin credentials - REQUIRED
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+
+      # Region configuration
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
+
+      # Optional: External URL configuration for reverse proxy deployments
+      # Uncomment when running behind a reverse proxy
+      # MINIO_SERVER_URL: ${MINIO_SERVER_URL:-}
+      # MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL:-}
+
+    # Port bindings - configurable via .env
+    # Default: localhost-only binding for security
+    ports:
+      # S3 API
+      - "${MINIO_BIND_ADDRESS:-127.0.0.1}:${MINIO_API_PORT:-9000}:9000"
+      # Web Console
+      - "${MINIO_BIND_ADDRESS:-127.0.0.1}:${MINIO_CONSOLE_PORT:-9001}:9001"
+
+    # Persistent storage
+    volumes:
+      - minio_data:/data
+
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Command: Start MinIO server with console
+    command: ["server", "/data", "--console-address", ":9001"]
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+
+    # Resource limits (adjust for your environment)
+    # Uncomment and modify as needed
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'
+    #       memory: 4G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
+
+# Named volumes for persistence
+volumes:
+  minio_data:
+    name: minio_data
+    # Data survives 'docker compose down'
+    # Data is DELETED with 'docker compose down -v'

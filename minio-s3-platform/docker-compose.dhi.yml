@@ -1,0 +1,21 @@
+# MinIO S3 Platform - Docker Hardened Image (DHI) Override
+# =========================================================
+# OPTION B: Use the official Docker Hardened MinIO image
+#
+# IMPORTANT: This requires Docker ELS entitlement or DHI subscription.
+# Only use if your organization has access to dhi.io registry.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dhi.yml up -d
+#
+# Prerequisites:
+#   docker login dhi.io
+
+services:
+  minio:
+    # Override to use Docker Hardened Image
+    build: !reset null
+    image: dhi.io/minio:RELEASE.2024-10-02T17-50-41Z
+    
+    # Note: DHI images may have different user configurations
+    # Verify the image documentation for specific requirements
