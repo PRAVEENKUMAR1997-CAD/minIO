@@ -195,6 +195,35 @@ http://127.0.0.1:9000
 developer-data
 ```
 
+## External S3 Browser (AWS S3 Read-Only Access)
+
+The External S3 Browser provides read-only access to AWS S3 buckets through a web interface. Users authenticate with MinIO credentials but browse actual AWS S3 data without copying it into MinIO.
+
+### Quick Setup
+
+1. Configure AWS IAM credentials with read-only permissions
+2. Edit `.env` and set:
+   ```bash
+   APPROVED_S3_BUCKETS=bucket1,bucket2
+   S3_BROWSER_SECRET_KEY=<generate-random-key>
+   AWS_ACCESS_KEY_ID=AKIA...
+   AWS_SECRET_ACCESS_KEY=...
+   ```
+3. Start with S3 browser:
+   ```bash
+   ./scripts/start-with-s3-browser.sh
+   ```
+4. Access at http://127.0.0.1:8080
+
+| Feature | Description |
+|---------|-------------|
+| Read-only | List, browse, download only |
+| No data copy | Data stays in AWS S3 |
+| Bucket allow-list | Only approved buckets visible |
+| Credentials hidden | AWS keys never exposed to users |
+
+See [docs/external-s3-browser.md](docs/external-s3-browser.md) for complete setup and security details.
+
 ## AWS CLI Integration
 
 ### Configure
@@ -429,8 +458,9 @@ This deployment does **NOT** provide:
 ```
 minio-s3-platform/
 ├── docker-compose.yml          # Main deployment
-├── docker-compose.dhi.yml      # DHI override
-├── docker-compose.legacy.yml   # Legacy override
+├── docker-compose.s3-browser.yml # External S3 Browser override
+├── docker-compose.dhi.yml      # DHI override (removed)
+├── docker-compose.legacy.yml   # Legacy override (removed)
 ├── Dockerfile                  # Multi-stage build
 ├── .dockerignore
 ├── .env.example
@@ -440,8 +470,19 @@ minio-s3-platform/
 ├── config/
 │   ├── policies/
 │   │   └── developer-policy.json
-│   └── lifecycle/
-│       └── bucket-lifecycle.json
+│   ├── lifecycle/
+│   │   └── bucket-lifecycle.json
+│   └── aws-iam/
+│       └── s3-browser-readonly-policy.json
+│
+├── external-s3-browser/        # AWS S3 read-only browser
+│   ├── Dockerfile
+│   ├── app.py
+│   ├── requirements.txt
+│   └── templates/
+│       ├── login.html
+│       ├── buckets.html
+│       └── browse.html
 │
 ├── scripts/
 │   ├── bootstrap.sh
@@ -449,6 +490,7 @@ minio-s3-platform/
 │   ├── create-bucket.sh
 │   ├── health-check.sh
 │   ├── start.sh
+│   ├── start-with-s3-browser.sh
 │   ├── stop.sh
 │   └── reset.sh
 │
@@ -459,7 +501,8 @@ minio-s3-platform/
 │   ├── security.md
 │   ├── backup-restore.md
 │   ├── upgrade.md
-│   └── integration.md
+│   ├── integration.md
+│   └── external-s3-browser.md
 │
 └── .github/
     └── workflows/

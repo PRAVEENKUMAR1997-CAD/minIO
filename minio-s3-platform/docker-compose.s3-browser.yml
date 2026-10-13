@@ -1,0 +1,83 @@
+# External S3 Browser - Docker Compose Override
+# ==============================================
+# Adds a read-only AWS S3 browser service alongside MinIO.
+#
+# Users authenticate with MinIO credentials but browse
+# actual AWS S3 buckets (data remains in AWS, not copied).
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.s3-browser.yml up -d
+#
+# Or use the convenience script:
+#   ./scripts/start-with-s3-browser.sh
+#
+# Prerequisites:
+#   1. Configure S3_BROWSER_* variables in .env
+#   2. Create read-only AWS IAM credentials
+#   3. Set APPROVED_S3_BUCKETS to allowed bucket names
+
+services:
+  # External S3 Browser - Read-only access to AWS S3 buckets
+  s3-browser:
+    build:
+      context: ./external-s3-browser
+      dockerfile: Dockerfile
+    image: external-s3-browser:local
+    container_name: external-s3-browser
+
+    restart: unless-stopped
+
+    # Requires MinIO to be running for authentication
+    depends_on:
+      minio:
+        condition: service_healthy
+
+    environment:
+      # MinIO endpoint for user authentication
+      MINIO_ENDPOINT: "http://minio:9000"
+      MINIO_AUTH_BUCKET: ${S3_BROWSER_AUTH_BUCKET:-developer-data}
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
+
+      # AWS credentials (server-side only, never exposed to users)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-ap-south-1}
+
+      # Allowed S3 buckets (comma-separated)
+      APPROVED_S3_BUCKETS: ${APPROVED_S3_BUCKETS:?APPROVED_S3_BUCKETS is required}
+
+      # Flask application configuration
+      APP_SECRET_KEY: ${S3_BROWSER_SECRET_KEY:?S3_BROWSER_SECRET_KEY is required}
+
+      # Disable secure cookies for local HTTP (set to true behind HTTPS proxy)
+      COOKIE_SECURE: ${S3_BROWSER_COOKIE_SECURE:-false}
+
+    ports:
+      - "${MINIO_BIND_ADDRESS:-127.0.0.1}:${S3_BROWSER_PORT:-8080}:8080"
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/login', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+
+    # Read-only filesystem (service only needs to read)
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777,size=10m
+
+    # No persistent storage needed
+    # AWS credentials come from environment, sessions in memory

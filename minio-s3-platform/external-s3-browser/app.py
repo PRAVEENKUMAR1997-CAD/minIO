@@ -15,14 +15,30 @@ app.secret_key = os.environ["APP_SECRET_KEY"]
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=os.getenv("COOKIE_SECURE", "true").lower() == "true",
+    SESSION_COOKIE_SECURE=os.getenv("COOKIE_SECURE", "false").lower() == "true",
     MAX_CONTENT_LENGTH=16 * 1024,
 )
 
 CSRFProtect(app)
 
+
+@app.template_filter('filesizeformat')
+def filesizeformat(value):
+    """Format file size in human-readable form."""
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return '—'
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if abs(value) < 1024.0:
+            return f"{value:,.1f} {unit}" if unit != 'B' else f"{value:,} {unit}"
+        value /= 1024.0
+    return f"{value:,.1f} PB"
+
+
 MINIO_ENDPOINT = os.environ["MINIO_ENDPOINT"]
 MINIO_AUTH_BUCKET = os.environ["MINIO_AUTH_BUCKET"]
+MINIO_REGION = os.getenv("MINIO_REGION", "us-east-1")
 MINIO_SECURE = MINIO_ENDPOINT.startswith("https://")
 
 APPROVED_BUCKETS = {
@@ -37,9 +53,10 @@ def minio_client(access_key, secret_key):
         endpoint_url=MINIO_ENDPOINT,
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
-        region_name="us-east-1",
+        region_name=MINIO_REGION,
         config=Config(
             signature_version="s3v4",
+            s3={"addressing_style": "path"},
             connect_timeout=3,
             read_timeout=5,
             retries={"max_attempts": 1},
@@ -48,8 +65,8 @@ def minio_client(access_key, secret_key):
     )
 
 def aws_client():
-    # Uses the EC2 instance role through boto3's default
-    # credential chain. No AWS keys are stored in this app.
+    # Server-side credentials only (env vars, instance role, or shared config).
+    # Users never receive AWS keys.
     return boto3.client(
         "s3",
         region_name=os.getenv("AWS_REGION", "ap-south-1"),

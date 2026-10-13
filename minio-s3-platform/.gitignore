@@ -52,3 +52,4 @@ certs/
 # Test artifacts
 test-output/
 coverage/
+external-s3-browser/.venv-test/

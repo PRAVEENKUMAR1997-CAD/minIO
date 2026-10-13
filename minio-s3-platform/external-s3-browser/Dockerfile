@@ -6,15 +6,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY --chown=10001:10001 requirements.txt .
+RUN useradd --system --uid 10001 --no-create-home appuser
+
+COPY --chown=appuser:appuser requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY --chown=10001:10001 app.py .
-COPY --chown=10001:10001 templates ./templates
+COPY --chown=appuser:appuser app.py .
+COPY --chown=appuser:appuser templates ./templates
 
-RUN useradd --system --uid 10001 appuser
-USER 10001
+USER appuser
 
 EXPOSE 8080
 

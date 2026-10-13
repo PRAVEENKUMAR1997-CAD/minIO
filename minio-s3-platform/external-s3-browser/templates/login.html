@@ -1,30 +1,400 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>External S3 Browser - Login</title>
-</head>
-<body>
-  <h2>External S3 Browser</h2>
-  <p>Sign in using your MinIO S3 access credentials.</p>
+{% extends "base.html" %}
+{% block title %}S3 Browser - Sign In{% endblock %}
 
-  {% for message in get_flashed_messages() %}
-    <p role="alert">{{ message }}</p>
-  {% endfor %}
+{% block head %}
+<style>
+  .login-wrapper {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 0; position: relative; background: #0f172a;
+  }
+  .login-container {
+    width: 100%; height: 100vh; min-height: 100vh;
+    background: linear-gradient(135deg, #1e3a5f 0%, #0d1b2a 40%, #1b263b 100%);
+    border-radius: 0; overflow: hidden; position: relative;
+    display: grid; grid-template-columns: 1fr 420px;
+  }
 
-  <form method="post">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <p>
-      <label>MinIO Access Key</label><br>
-      <input name="access_key" autocomplete="username" required>
-    </p>
-    <p>
-      <label>MinIO Secret Key</label><br>
-      <input name="secret_key" type="password"
-             autocomplete="current-password" required>
-    </p>
-    <button type="submit">Sign in</button>
-  </form>
-</body>
-</html>
+  /* Landscape Background */
+  .landscape-bg {
+    position: absolute; inset: 0; z-index: 0; overflow: hidden;
+  }
+  .landscape-bg::before {
+    content: ''; position: absolute; inset: 0;
+    background: 
+      radial-gradient(ellipse 120% 60% at 50% 100%, rgba(30,58,95,0.9) 0%, transparent 70%),
+      radial-gradient(ellipse 80% 50% at 30% 80%, rgba(59,130,246,0.2) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 40% at 70% 85%, rgba(124,58,237,0.15) 0%, transparent 50%),
+      linear-gradient(180deg, #4a90c2 0%, #7ec8e3 15%, #f8d49a 35%, #f5a962 45%, #1e3a5f 60%);
+  }
+  .mountains {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 45%;
+    background: linear-gradient(180deg, transparent 0%, #1a2942 30%, #0f1d2d 100%);
+  }
+  .mountains::before {
+    content: ''; position: absolute; bottom: 20%; left: 0; right: 0; height: 80%;
+    background: 
+      linear-gradient(135deg, transparent 40%, #2d4a6a 40.5%, #2d4a6a 42%, transparent 42.5%),
+      linear-gradient(150deg, transparent 30%, #1e3854 30.5%, #1e3854 35%, transparent 35.5%),
+      linear-gradient(165deg, transparent 50%, #243b55 50.5%, #243b55 55%, transparent 55.5%);
+    opacity: 0.6;
+  }
+  .water-reflection {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 20%;
+    background: linear-gradient(180deg, rgba(30,58,95,0.8) 0%, rgba(15,29,45,0.95) 100%);
+    opacity: 0.9;
+  }
+  .water-reflection::before {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px);
+    animation: waterShimmer 8s ease-in-out infinite;
+  }
+  @keyframes waterShimmer { 0%,100% { opacity: 0.5; } 50% { opacity: 0.8; } }
+
+  .clouds {
+    position: absolute; top: 5%; left: 0; right: 0; height: 30%; pointer-events: none;
+  }
+  .cloud {
+    position: absolute; border-radius: 50%; background: rgba(255,255,255,0.15);
+    filter: blur(20px); animation: cloudDrift 60s linear infinite;
+  }
+  .cloud:nth-child(1) { width: 200px; height: 60px; top: 10%; left: 10%; animation-delay: 0s; }
+  .cloud:nth-child(2) { width: 150px; height: 45px; top: 25%; left: 60%; animation-delay: -20s; }
+  .cloud:nth-child(3) { width: 180px; height: 50px; top: 5%; left: 40%; animation-delay: -40s; }
+  @keyframes cloudDrift { 0% { transform: translateX(-10%); } 100% { transform: translateX(10%); } }
+
+  /* Left Hero Section */
+  .hero-section {
+    position: relative; z-index: 2; padding: 48px; display: flex; flex-direction: column;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: auto; }
+  .brand-icon {
+    width: 44px; height: 44px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  }
+  .brand-icon svg { width: 24px; height: 24px; color: white; }
+  .brand-text h1 { font-size: 1.25rem; font-weight: 700; color: white; }
+  .brand-text p { font-size: 0.75rem; color: rgba(255,255,255,0.7); margin-top: 2px; }
+
+  .hero-content { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 20px 0; }
+  .hero-title { font-size: 2.5rem; font-weight: 700; line-height: 1.2; margin-bottom: 8px; color: white; }
+  .hero-title .gradient {
+    background: linear-gradient(90deg, #00d4ff, #7c3aed);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .hero-tagline { font-size: 1.1rem; font-weight: 600; color: var(--accent-cyan); margin-bottom: 16px; }
+  .hero-desc { font-size: 0.95rem; color: rgba(255,255,255,0.75); max-width: 380px; line-height: 1.6; }
+
+  /* Floating Buckets Visualization */
+  .bucket-viz {
+    position: relative; height: 220px; margin: 30px 0;
+  }
+  .central-bucket {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 90px; height: 90px; z-index: 10;
+  }
+  .central-bucket::before {
+    content: ''; position: absolute; inset: -20px;
+    background: radial-gradient(circle, rgba(0,212,255,0.4) 0%, transparent 70%);
+    border-radius: 50%; animation: centralPulse 3s ease-in-out infinite;
+  }
+  @keyframes centralPulse { 0%,100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.2); opacity: 0.3; } }
+  .central-bucket svg { width: 100%; height: 100%; filter: drop-shadow(0 0 30px rgba(0,212,255,0.6)); }
+
+  .orbit-ring {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    border: 1px dashed rgba(0,212,255,0.3); border-radius: 50%; animation: orbitRotate 40s linear infinite;
+  }
+  .orbit-ring:nth-child(1) { width: 180px; height: 180px; }
+  .orbit-ring:nth-child(2) { width: 280px; height: 280px; animation-direction: reverse; animation-duration: 60s; }
+  @keyframes orbitRotate { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+  .floating-card {
+    position: absolute; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px; animation: floatCard 6s ease-in-out infinite;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+  .floating-card svg { width: 28px; height: 28px; flex-shrink: 0; }
+  .floating-card span { font-size: 0.8rem; font-weight: 500; color: white; white-space: nowrap; }
+  .floating-card:nth-child(3) { top: 10%; left: 5%; animation-delay: 0s; }
+  .floating-card:nth-child(4) { top: 5%; right: 25%; animation-delay: -1s; }
+  .floating-card:nth-child(5) { bottom: 15%; left: 0; animation-delay: -2s; }
+  .floating-card:nth-child(6) { bottom: 25%; right: 15%; animation-delay: -3s; }
+  .floating-card:nth-child(7) { top: 45%; left: -5%; animation-delay: -4s; }
+  @keyframes floatCard { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+
+  .particles {
+    position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+  }
+  .particle {
+    position: absolute; width: 4px; height: 4px; background: var(--accent-cyan);
+    border-radius: 50%; opacity: 0.6; animation: particleFloat 8s ease-in-out infinite;
+  }
+  .particle:nth-child(1) { top: 20%; left: 20%; animation-delay: 0s; }
+  .particle:nth-child(2) { top: 40%; left: 70%; animation-delay: -2s; }
+  .particle:nth-child(3) { top: 60%; left: 30%; animation-delay: -4s; }
+  .particle:nth-child(4) { top: 30%; left: 50%; animation-delay: -6s; }
+  @keyframes particleFloat { 0%,100% { transform: translateY(0) scale(1); opacity: 0.6; } 50% { transform: translateY(-20px) scale(1.5); opacity: 0.3; } }
+
+  /* Bottom Indicators */
+  .hero-indicators {
+    display: flex; gap: 24px; margin-top: auto; padding-top: 20px;
+  }
+  .indicator {
+    display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: rgba(255,255,255,0.8);
+  }
+  .indicator svg { width: 18px; height: 18px; color: var(--accent-cyan); }
+
+  /* Right Login Panel */
+  .login-panel {
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(20px);
+    padding: 48px 40px; display: flex; flex-direction: column; justify-content: center;
+    position: relative; z-index: 10;
+  }
+  .login-header { text-align: center; margin-bottom: 32px; }
+  .login-logo { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px; }
+  .login-logo svg { width: 36px; height: 36px; }
+  .login-logo span { font-size: 1.4rem; font-weight: 700; color: #1e293b; }
+  .login-subtitle { font-size: 0.85rem; color: #64748b; }
+
+  .login-form .form-group { margin-bottom: 20px; }
+  .login-form .form-label { display: block; font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 8px; }
+  .login-form .form-input {
+    width: 100%; padding: 14px 16px; background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 10px; font-size: 0.95rem; color: #1e293b; transition: all 0.2s;
+  }
+  .login-form .form-input:focus { outline: none; border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); background: white; }
+  .login-form .form-input::placeholder { color: #94a3b8; }
+  .login-form .input-wrapper { position: relative; }
+  .login-form .toggle-password {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px;
+  }
+  .login-form .toggle-password:hover { color: #64748b; }
+
+  .login-btn {
+    width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600;
+    background: linear-gradient(135deg, #3b82f6, #7c3aed); color: white; cursor: pointer;
+    transition: all 0.3s; box-shadow: 0 4px 15px rgba(59,130,246,0.3);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .login-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(59,130,246,0.4); }
+  .login-btn:active { transform: translateY(0); }
+  .login-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+  .login-btn .spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .divider { display: flex; align-items: center; gap: 16px; margin: 24px 0; color: #94a3b8; font-size: 0.8rem; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+
+  .security-notice {
+    background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 14px 16px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .security-notice svg { width: 20px; height: 20px; color: #0284c7; flex-shrink: 0; margin-top: 2px; }
+  .security-notice p { font-size: 0.8rem; color: #0369a1; line-height: 1.5; }
+
+  .alert-error {
+    background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 14px 16px;
+    margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #dc2626; font-size: 0.9rem;
+  }
+  .alert-error svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .login-container { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
+    .hero-section { display: none; }
+    .login-panel { padding: 40px 32px; min-height: 100vh; }
+  }
+  @media (max-width: 480px) {
+    .login-panel { padding: 32px 24px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cloud, .orbit-ring, .floating-card, .particle, .central-bucket::before, .water-reflection::before { animation: none; }
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="login-wrapper">
+  <div class="login-container">
+    <!-- Landscape Background -->
+    <div class="landscape-bg">
+      <div class="clouds">
+        <div class="cloud"></div>
+        <div class="cloud"></div>
+        <div class="cloud"></div>
+      </div>
+      <div class="mountains"></div>
+      <div class="water-reflection"></div>
+    </div>
+
+    <!-- Left Hero Section -->
+    <section class="hero-section">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>S3 Browser</h1>
+          <p>Access Your AWS S3 Buckets</p>
+        </div>
+      </div>
+
+      <div class="hero-content">
+        <h2 class="hero-title">Your S3 Buckets,<br><span class="gradient">Right at Your Fingertips</span></h2>
+        <p class="hero-tagline">Secure. Simple. Fast.</p>
+        <p class="hero-desc">Browse and download files from your authorized AWS S3 buckets with a clean, intuitive interface. Read-only access ensures your data stays safe.</p>
+      </div>
+
+      <div class="bucket-viz">
+        <div class="orbit-ring"></div>
+        <div class="orbit-ring"></div>
+        <div class="floating-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+          <span>documents/</span>
+        </div>
+        <div class="floating-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+          <span>backups/</span>
+        </div>
+        <div class="floating-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#5eead4" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+          <span>media/</span>
+        </div>
+        <div class="floating-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+          <span>exports/</span>
+        </div>
+        <div class="floating-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+          <span>logs/</span>
+        </div>
+        <div class="central-bucket">
+          <svg viewBox="0 0 24 24" fill="none" stroke="url(#bucketGrad)" stroke-width="1.5">
+            <defs>
+              <linearGradient id="bucketGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#00d4ff"/>
+                <stop offset="100%" stop-color="#7c3aed"/>
+              </linearGradient>
+            </defs>
+            <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
+        </div>
+        <div class="particles">
+          <div class="particle"></div>
+          <div class="particle"></div>
+          <div class="particle"></div>
+          <div class="particle"></div>
+        </div>
+      </div>
+
+      <div class="hero-indicators">
+        <div class="indicator">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Secure Access
+        </div>
+        <div class="indicator">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+          Authorized Buckets
+        </div>
+        <div class="indicator">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          Read Only
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Login Panel -->
+    <aside class="login-panel">
+      <div class="login-header">
+        <div class="login-logo">
+          <svg viewBox="0 0 48 48" fill="none">
+            <defs>
+              <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#3b82f6"/>
+                <stop offset="100%" stop-color="#7c3aed"/>
+              </linearGradient>
+            </defs>
+            <path d="M24 4L6 14v20l18 10 18-10V14L24 4z" stroke="url(#logoGrad)" stroke-width="2.5" fill="none"/>
+            <path d="M6 14l18 10 18-10M24 24v20" stroke="url(#logoGrad)" stroke-width="2.5" fill="none"/>
+          </svg>
+          <span>S3 Browser</span>
+        </div>
+        <p class="login-subtitle">Sign in with your MinIO credentials</p>
+      </div>
+
+      {% for message in get_flashed_messages() %}
+      <div class="alert-error" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ message }}
+      </div>
+      {% endfor %}
+
+      <form method="post" id="loginForm" class="login-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-group">
+          <label class="form-label" for="access_key">MinIO Access Key</label>
+          <input type="text" id="access_key" name="access_key" class="form-input" autocomplete="username" required placeholder="Enter your access key">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="secret_key">MinIO Secret Key</label>
+          <div class="input-wrapper">
+            <input type="password" id="secret_key" name="secret_key" class="form-input" autocomplete="current-password" required placeholder="Enter your secret key">
+            <button type="button" class="toggle-password" aria-label="Toggle password visibility" onclick="togglePassword()">
+              <svg id="eyeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="login-btn" id="submitBtn">
+          <span id="btnText">Login</span>
+          <span id="btnSpinner" class="spinner" style="display: none;"></span>
+        </button>
+      </form>
+
+      <div class="divider">Or</div>
+
+      <div class="security-notice">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+        </svg>
+        <p>Your MinIO credentials authenticate you to this browser. AWS S3 access uses server-side credentials with read-only permissions to approved buckets.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function togglePassword() {
+    const input = document.getElementById('secret_key');
+    const icon = document.getElementById('eyeIcon');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+    } else {
+      input.type = 'password';
+      icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    }
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', function() {
+    const btn = document.getElementById('submitBtn');
+    const text = document.getElementById('btnText');
+    const spinner = document.getElementById('btnSpinner');
+    btn.disabled = true;
+    text.textContent = 'Signing in...';
+    spinner.style.display = 'inline-block';
+  });
+</script>
+{% endblock %}
