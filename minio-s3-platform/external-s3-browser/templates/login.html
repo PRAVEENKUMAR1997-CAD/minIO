@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>External S3 Browser - Login</title>
+</head>
+<body>
+  <h2>External S3 Browser</h2>
+  <p>Sign in using your MinIO S3 access credentials.</p>
+
+  {% for message in get_flashed_messages() %}
+    <p role="alert">{{ message }}</p>
+  {% endfor %}
+
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <p>
+      <label>MinIO Access Key</label><br>
+      <input name="access_key" autocomplete="username" required>
+    </p>
+    <p>
+      <label>MinIO Secret Key</label><br>
+      <input name="secret_key" type="password"
+             autocomplete="current-password" required>
+    </p>
+    <button type="submit">Sign in</button>
+  </form>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ bucket }} - S3 Browser</title>
+</head>
+<body>
+  <p><a href="{{ url_for('index') }}">All approved buckets</a></p>
+  <h2>{{ bucket }}</h2>
+  <p>Path: /{{ prefix }}</p>
+
+  {% if prefix %}
+    <p>
+      <a href="{{ url_for('browse', bucket=bucket, prefix=parent) }}">
+        .. Parent folder
+      </a>
+    </p>
+  {% endif %}
+
+  <h3>Folders</h3>
+  <ul>
+    {% for folder in folders %}
+      <li>
+        <a href="{{ url_for('browse', bucket=bucket, prefix=folder['Prefix']) }}">
+          {{ folder['Prefix'][prefix|length:] }}
+        </a>
+      </li>
+    {% else %}
+      <li>No subfolders.</li>
+    {% endfor %}
+  </ul>
+
+  <h3>Files</h3>
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr><th>Object</th><th>Size (bytes)</th><th>Last modified</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+      {% for obj in objects %}
+        <tr>
+          <td>{{ obj['Key'][prefix|length:] }}</td>
+          <td>{{ obj['Size'] }}</td>
+          <td>{{ obj['LastModified'] }}</td>
+          <td>
+            <a href="{{ url_for('download', bucket=bucket, key=obj['Key']) }}">
+              Download
+            </a>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">No files in this folder.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if truncated %}
+    <p>This folder contains more than 1,000 entries.
+       Pagination needs to be added to this version.</p>
+  {% endif %}
+</body>
+</html>

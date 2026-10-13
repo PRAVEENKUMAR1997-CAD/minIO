@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Approved S3 Buckets</title>
+</head>
+<body>
+  <h2>Approved AWS S3 Buckets</h2>
+  <p>Signed in as {{ session.get('minio_user') }}</p>
+
+  <form method="post" action="{{ url_for('logout') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit">Sign out</button>
+  </form>
+
+  <ul>
+    {% for bucket in buckets %}
+      <li><a href="{{ url_for('browse', bucket=bucket) }}">{{ bucket }}</a></li>
+    {% else %}
+      <li>No approved buckets configured.</li>
+    {% endfor %}
+  </ul>
+</body>
+</html>
