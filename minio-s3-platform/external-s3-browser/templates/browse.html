@@ -1,62 +1,239 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ bucket }} - S3 Browser</title>
-</head>
-<body>
-  <p><a href="{{ url_for('index') }}">All approved buckets</a></p>
-  <h2>{{ bucket }}</h2>
-  <p>Path: /{{ prefix }}</p>
+{% extends "base.html" %}
+{% block title %}{{ bucket }} - S3 Browser{% endblock %}
 
-  {% if prefix %}
-    <p>
-      <a href="{{ url_for('browse', bucket=bucket, prefix=parent) }}">
-        .. Parent folder
-      </a>
-    </p>
-  {% endif %}
+{% block body %}
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
-  <h3>Folders</h3>
-  <ul>
-    {% for folder in folders %}
-      <li>
-        <a href="{{ url_for('browse', bucket=bucket, prefix=folder['Prefix']) }}">
-          {{ folder['Prefix'][prefix|length:] }}
+<div class="mobile-header">
+  <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+  <span style="font-weight: 600;">{{ bucket }}</span>
+  <div style="width: 40px;"></div>
+</div>
+
+<div class="dashboard">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <svg viewBox="0 0 48 48" fill="none">
+          <defs>
+            <linearGradient id="sidebarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#7c3aed"/>
+            </linearGradient>
+          </defs>
+          <path d="M24 4L6 14v20l18 10 18-10V14L24 4z" stroke="url(#sidebarGrad)" stroke-width="2" fill="none"/>
+          <path d="M6 14l18 10 18-10M24 24v20" stroke="url(#sidebarGrad)" stroke-width="2" fill="none"/>
+        </svg>
+        <span>S3 Browser</span>
+      </div>
+      <div class="sidebar-user">
+        Signed in as<br><strong>{{ session.get('minio_user') }}</strong>
+      </div>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-title">Navigation</div>
+        <a href="{{ url_for('index') }}" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
+          All Buckets
         </a>
-      </li>
-    {% else %}
-      <li>No subfolders.</li>
-    {% endfor %}
-  </ul>
+      </div>
+      
+      <div class="nav-section">
+        <div class="nav-section-title">Current Bucket</div>
+        <a href="{{ url_for('browse', bucket=bucket) }}" class="nav-item active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+          </svg>
+          {{ bucket }}
+        </a>
+      </div>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="readonly-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+        </svg>
+        Read-Only Access
+      </div>
+      <form method="post" action="{{ url_for('logout') }}" style="margin-top: 16px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-secondary" style="width: 100%;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Sign Out
+        </button>
+      </form>
+    </div>
+  </aside>
+  
+  <main class="main-content">
+    <header class="content-header">
+      <h1 class="content-title">{{ bucket }}</h1>
+      <nav class="breadcrumbs">
+        <a href="{{ url_for('index') }}">Buckets</a>
+        <span class="sep">/</span>
+        <a href="{{ url_for('browse', bucket=bucket) }}">{{ bucket }}</a>
+        {% if prefix %}
+          {% set parts = prefix.rstrip('/').split('/') %}
+          {% for part in parts %}
+            <span class="sep">/</span>
+            {% set current_prefix = '/'.join(parts[:loop.index]) + '/' %}
+            {% if loop.last %}
+              <span>{{ part }}</span>
+            {% else %}
+              <a href="{{ url_for('browse', bucket=bucket, prefix=current_prefix) }}">{{ part }}</a>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+      </nav>
+    </header>
+    
+    <div class="file-browser glass-card">
+      <div class="browser-toolbar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="searchInput" placeholder="Filter files and folders..." oninput="filterItems()">
+        </div>
+        <div style="color: var(--text-muted); font-size: 0.875rem;">
+          {{ folders|length }} folder{% if folders|length != 1 %}s{% endif %}, 
+          {{ objects|length }} file{% if objects|length != 1 %}s{% endif %}
+        </div>
+      </div>
+      
+      <table class="file-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Size</th>
+            <th>Last Modified</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="fileList">
+          {% if prefix %}
+          <tr class="file-row">
+            <td>
+              <a href="{{ url_for('browse', bucket=bucket, prefix=parent) }}" class="file-name">
+                <div class="file-icon folder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/>
+                  </svg>
+                </div>
+                <div class="file-details">
+                  <div class="name">..</div>
+                  <div class="meta">Parent directory</div>
+                </div>
+              </a>
+            </td>
+            <td class="file-size">—</td>
+            <td class="file-date">—</td>
+            <td></td>
+          </tr>
+          {% endif %}
+          
+          {% for folder in folders %}
+          <tr class="file-row" data-name="{{ folder['Prefix'][prefix|length:] }}">
+            <td>
+              <a href="{{ url_for('browse', bucket=bucket, prefix=folder['Prefix']) }}" class="file-name">
+                <div class="file-icon folder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                  </svg>
+                </div>
+                <div class="file-details">
+                  <div class="name">{{ folder['Prefix'][prefix|length:] }}</div>
+                  <div class="meta">Folder</div>
+                </div>
+              </a>
+            </td>
+            <td class="file-size">—</td>
+            <td class="file-date">—</td>
+            <td></td>
+          </tr>
+          {% endfor %}
+          
+          {% for obj in objects %}
+          <tr class="file-row" data-name="{{ obj['Key'][prefix|length:] }}">
+            <td>
+              <div class="file-name">
+                <div class="file-icon file">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                </div>
+                <div class="file-details">
+                  <div class="name" title="{{ obj['Key'][prefix|length:] }}">{{ obj['Key'][prefix|length:] }}</div>
+                  <div class="meta">{{ obj['Key'].rsplit('.', 1)[-1]|upper if '.' in obj['Key'] else 'FILE' }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="file-size">{{ obj['Size']|filesizeformat if obj['Size'] is defined else '—' }}</td>
+            <td class="file-date">{% if obj.get('LastModified') and obj['LastModified'].strftime is defined %}{{ obj['LastModified'].strftime('%b %d, %Y %H:%M') }}{% else %}{{ obj.get('LastModified', '—') }}{% endif %}</td>
+            <td class="file-actions">
+              <a href="{{ url_for('download', bucket=bucket, key=obj['Key']) }}" class="btn btn-primary btn-download">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download
+              </a>
+            </td>
+          </tr>
+          {% else %}
+          {% if not folders %}
+          <tr id="emptyRow">
+            <td colspan="4">
+              <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                </svg>
+                <h3>This folder is empty</h3>
+                <p>There are no files or subfolders in this location.</p>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+      
+      {% if truncated %}
+      <div class="truncation-notice">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        This folder contains more than 1,000 items. Only the first 1,000 are shown.
+      </div>
+      {% endif %}
+    </div>
+  </main>
+</div>
+{% endblock %}
 
-  <h3>Files</h3>
-  <table border="1" cellpadding="6">
-    <thead>
-      <tr><th>Object</th><th>Size (bytes)</th><th>Last modified</th><th>Action</th></tr>
-    </thead>
-    <tbody>
-      {% for obj in objects %}
-        <tr>
-          <td>{{ obj['Key'][prefix|length:] }}</td>
-          <td>{{ obj['Size'] }}</td>
-          <td>{{ obj['LastModified'] }}</td>
-          <td>
-            <a href="{{ url_for('download', bucket=bucket, key=obj['Key']) }}">
-              Download
-            </a>
-          </td>
-        </tr>
-      {% else %}
-        <tr><td colspan="4">No files in this folder.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  {% if truncated %}
-    <p>This folder contains more than 1,000 entries.
-       Pagination needs to be added to this version.</p>
-  {% endif %}
-</body>
-</html>
+{% block scripts %}
+<script>
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('active');
+  }
+  
+  function filterItems() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const rows = document.querySelectorAll('.file-row[data-name]');
+    rows.forEach(row => {
+      const name = row.dataset.name.toLowerCase();
+      row.style.display = name.includes(query) ? '' : 'none';
+    });
+  }
+</script>
+{% endblock %}
