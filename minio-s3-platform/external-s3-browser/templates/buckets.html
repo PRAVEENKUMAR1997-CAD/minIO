@@ -18,15 +18,39 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-logo">
-        <svg viewBox="0 0 48 48" fill="none">
-          <defs>
-            <linearGradient id="sidebarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#7c3aed"/>
-            </linearGradient>
-          </defs>
-          <path d="M24 4L6 14v20l18 10 18-10V14L24 4z" stroke="url(#sidebarGrad)" stroke-width="2" fill="none"/>
-          <path d="M6 14l18 10 18-10M24 24v20" stroke="url(#sidebarGrad)" stroke-width="2" fill="none"/>
-        </svg>
+        <div class="vault-logo success" aria-label="Data Vault Logo">
+          <svg class="vault-base" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="vaultGradSidebar" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#00d4ff"/>
+                <stop offset="100%" stop-color="#3b82f6"/>
+              </linearGradient>
+            </defs>
+            <path class="vault-stroke" d="M24 6L40 14V26L24 34L8 26V14L24 6Z" stroke="url(#vaultGradSidebar)" stroke-width="1.5" fill="none"/>
+            <path class="vault-stroke" d="M8 14L24 22L40 14" stroke="url(#vaultGradSidebar)" stroke-width="1.2" fill="none" opacity="0.7"/>
+            <path class="vault-stroke" d="M24 22V34" stroke="url(#vaultGradSidebar)" stroke-width="1.2" fill="none" opacity="0.7"/>
+            <circle cx="24" cy="18" r="4" stroke="#00d4ff" stroke-width="0.8" fill="none" opacity="0.5"/>
+          </svg>
+          <div class="vault-particles">
+            <div class="vault-particle"></div>
+            <div class="vault-particle"></div>
+            <div class="vault-particle"></div>
+            <div class="vault-particle"></div>
+            <div class="vault-particle"></div>
+          </div>
+          <div class="vault-nodes">
+            <div class="vault-node"></div>
+            <div class="vault-node"></div>
+            <div class="vault-node"></div>
+            <div class="vault-node"></div>
+            <div class="vault-node"></div>
+          </div>
+          <div class="vault-connections">
+            <svg viewBox="0 0 64 64" fill="none">
+              <circle cx="32" cy="32" r="28" stroke="var(--accent-cyan)" stroke-width="0.5" stroke-dasharray="4 6"/>
+            </svg>
+          </div>
+        </div>
         <span>S3 Browser</span>
       </div>
       <div class="sidebar-user">

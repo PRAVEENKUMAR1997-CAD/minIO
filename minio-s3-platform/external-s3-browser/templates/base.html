@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}S3 Browser{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <style>
     :root {
       --bg-deep: #0a0e27;
@@ -27,6 +28,159 @@
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+
+    /* Data Rain Vault Animated Logo */
+    .vault-logo {
+      position: relative;
+      width: 48px;
+      height: 48px;
+      flex-shrink: 0;
+    }
+    .vault-logo svg.vault-base {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.4));
+      transition: filter var(--transition);
+    }
+    .vault-logo.loading svg.vault-base {
+      filter: drop-shadow(0 0 12px rgba(0, 212, 255, 0.6));
+    }
+    .vault-logo.error svg.vault-base {
+      filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.5));
+    }
+    .vault-logo.error svg.vault-base .vault-stroke {
+      stroke: var(--error);
+    }
+
+    /* Particle Rain (Loading State) */
+    .vault-particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: visible;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .vault-logo.loading .vault-particles {
+      opacity: 1;
+    }
+    .vault-particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: var(--accent-cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--accent-cyan);
+      animation: particleRain 1.5s ease-in infinite;
+    }
+    .vault-particle:nth-child(1) { left: 30%; animation-delay: 0s; }
+    .vault-particle:nth-child(2) { left: 50%; animation-delay: 0.3s; }
+    .vault-particle:nth-child(3) { left: 70%; animation-delay: 0.6s; }
+    .vault-particle:nth-child(4) { left: 40%; animation-delay: 0.9s; }
+    .vault-particle:nth-child(5) { left: 60%; animation-delay: 1.2s; }
+
+    @keyframes particleRain {
+      0% { top: -10px; opacity: 0; transform: scale(0.5); }
+      20% { opacity: 1; transform: scale(1); }
+      80% { opacity: 0.8; }
+      100% { top: 70%; opacity: 0; transform: scale(0.3); }
+    }
+
+    /* Orbiting Nodes (Success State) */
+    .vault-nodes {
+      position: absolute;
+      inset: -8px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    .vault-logo.success .vault-nodes {
+      opacity: 1;
+    }
+    .vault-node {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: var(--accent-cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent-cyan), 0 0 16px rgba(0, 212, 255, 0.3);
+      animation: orbitNode 8s linear infinite;
+    }
+    .vault-node:nth-child(1) { animation-delay: 0s; }
+    .vault-node:nth-child(2) { animation-delay: -2s; --orbit-offset: 72deg; }
+    .vault-node:nth-child(3) { animation-delay: -4s; --orbit-offset: 144deg; }
+    .vault-node:nth-child(4) { animation-delay: -6s; --orbit-offset: 216deg; }
+    .vault-node:nth-child(5) { animation-delay: -8s; --orbit-offset: 288deg; }
+
+    @keyframes orbitNode {
+      0% { transform: rotate(var(--orbit-offset, 0deg)) translateX(28px) rotate(calc(-1 * var(--orbit-offset, 0deg))); }
+      100% { transform: rotate(calc(var(--orbit-offset, 0deg) + 360deg)) translateX(28px) rotate(calc(-1 * (var(--orbit-offset, 0deg) + 360deg))); }
+    }
+
+    /* Connection lines between nodes */
+    .vault-connections {
+      position: absolute;
+      inset: -8px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s ease 0.2s;
+    }
+    .vault-logo.success .vault-connections {
+      opacity: 0.4;
+    }
+    .vault-connections svg {
+      width: 100%;
+      height: 100%;
+      animation: connectionPulse 4s ease-in-out infinite;
+    }
+    @keyframes connectionPulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Loading overlay for page transitions */
+    .page-loader {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 14, 39, 0.9);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    .page-loader.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .page-loader .vault-logo {
+      width: 80px;
+      height: 80px;
+    }
+    .page-loader .vault-logo .vault-particle {
+      width: 6px;
+      height: 6px;
+    }
+    .page-loader-text {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* Error state shake */
+    .vault-logo.error svg.vault-base {
+      animation: errorShake 0.5s ease;
+    }
+    @keyframes errorShake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-3px); }
+      40%, 80% { transform: translateX(3px); }
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { font-size: 16px; }
@@ -225,6 +379,38 @@
 <body>
   <div class="bg-animation"></div>
   <div class="light-follow" id="lightFollow"></div>
+
+  <!-- Page Loader with Data Rain Vault -->
+  <div class="page-loader" id="pageLoader">
+    <div class="vault-logo loading" aria-hidden="true">
+      <svg class="vault-base" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="vaultGradLoader" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#00d4ff"/>
+            <stop offset="100%" stop-color="#3b82f6"/>
+          </linearGradient>
+        </defs>
+        <!-- Hexagonal vault top -->
+        <path class="vault-stroke" d="M24 6L40 14V26L24 34L8 26V14L24 6Z" stroke="url(#vaultGradLoader)" stroke-width="1.5" fill="none"/>
+        <!-- Inner structure lines -->
+        <path class="vault-stroke" d="M8 14L24 22L40 14" stroke="url(#vaultGradLoader)" stroke-width="1.2" fill="none" opacity="0.7"/>
+        <path class="vault-stroke" d="M24 22V34" stroke="url(#vaultGradLoader)" stroke-width="1.2" fill="none" opacity="0.7"/>
+        <!-- Inner glow circle -->
+        <circle cx="24" cy="18" r="4" stroke="#00d4ff" stroke-width="0.8" fill="none" opacity="0.5"/>
+        <!-- Down arrow -->
+        <path d="M24 10V17M21 14L24 17L27 14" stroke="#00d4ff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="vault-particles">
+        <div class="vault-particle"></div>
+        <div class="vault-particle"></div>
+        <div class="vault-particle"></div>
+        <div class="vault-particle"></div>
+        <div class="vault-particle"></div>
+      </div>
+    </div>
+    <span class="page-loader-text">Loading bucket data...</span>
+  </div>
+
   {% block body %}{% endblock %}
   <script>
     (function() {
@@ -240,6 +426,29 @@
         requestAnimationFrame(animate);
       }
       animate();
+    })();
+
+    /* Page Loader for bucket navigation */
+    (function() {
+      const loader = document.getElementById('pageLoader');
+      if (!loader) return;
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      /* Show loader on bucket link clicks */
+      document.addEventListener('click', function(e) {
+        const link = e.target.closest('a[href*="/bucket/"]');
+        if (link && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+          if (reducedMotion) return;
+          loader.classList.add('active');
+        }
+      });
+
+      /* Hide loader on back/forward navigation */
+      window.addEventListener('pageshow', function(e) {
+        if (e.persisted) {
+          loader.classList.remove('active');
+        }
+      });
     })();
   </script>
   {% block scripts %}{% endblock %}
