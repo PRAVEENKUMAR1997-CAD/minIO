@@ -114,7 +114,9 @@
     display: flex; align-items: center; gap: 10px; animation: floatCard 6s ease-in-out infinite;
     box-shadow: 0 8px 32px rgba(0,0,0,0.2);
   }
-  .floating-card svg { width: 28px; height: 28px; flex-shrink: 0; }
+  .floating-card svg { width: 28px; height: 28px; flex-shrink: 0; transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1), filter 250ms ease; }
+  .floating-card:hover { box-shadow: 0 12px 24px rgba(0, 0, 0, 0.32), 0 0 16px rgba(0, 212, 255, 0.22); }
+  .floating-card:hover svg { transform: translateY(-3px); filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35)) drop-shadow(0 0 8px rgba(0, 212, 255, 0.45)); }
   .floating-card span { font-size: 0.8rem; font-weight: 500; color: white; white-space: nowrap; }
   .floating-card:nth-child(3) { top: 10%; left: 5%; animation-delay: 0s; }
   .floating-card:nth-child(4) { top: 5%; right: 25%; animation-delay: -1s; }
@@ -178,7 +180,7 @@
     transition: all 0.3s; box-shadow: 0 4px 15px rgba(59,130,246,0.3);
     display: flex; align-items: center; justify-content: center; gap: 8px;
   }
-  .login-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(59,130,246,0.4); }
+  .login-btn:hover { transform: translateY(-4px); box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18), 0 0 22px rgba(59, 130, 246, 0.38); }
   .login-btn:active { transform: translateY(0); }
   .login-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
   .login-btn .spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }

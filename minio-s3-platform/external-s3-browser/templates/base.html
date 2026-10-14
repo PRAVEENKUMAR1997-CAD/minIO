@@ -25,6 +25,9 @@
       --radius-sm: 8px;
       --shadow-glow: 0 0 40px rgba(0, 212, 255, 0.15);
       --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --lift: 250ms cubic-bezier(0.22, 1, 0.36, 1);
+      --lift-shadow: 0 10px 22px rgba(0, 0, 0, 0.34);
+      --lift-glow: 0 0 18px rgba(0, 212, 255, 0.22);
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
@@ -231,18 +234,24 @@
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
       padding: 12px 24px; border: none; border-radius: var(--radius-sm);
       font-size: 0.95rem; font-weight: 600; cursor: pointer;
-      transition: all var(--transition); position: relative; overflow: hidden;
+      transition: transform var(--lift), box-shadow var(--lift), background var(--transition), border-color var(--transition), color var(--transition);
+      position: relative;
     }
     .btn-primary {
       background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
       color: var(--bg-deep); box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
     }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(0, 212, 255, 0.4); }
-    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:hover { transform: translateY(-4px); box-shadow: var(--lift-shadow), 0 0 22px rgba(0, 212, 255, 0.38); }
+    .btn-primary:active, .btn-secondary:active { transform: translateY(0); }
     .btn-secondary {
       background: transparent; border: 1px solid var(--border-subtle); color: var(--text-primary);
     }
-    .btn-secondary:hover { background: rgba(255,255,255,0.05); border-color: var(--accent-cyan); }
+    .btn-secondary:hover {
+      transform: translateY(-4px);
+      background: rgba(255,255,255,0.05);
+      border-color: var(--accent-cyan);
+      box-shadow: var(--lift-shadow), var(--lift-glow);
+    }
     .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
     .btn .spinner { width: 18px; height: 18px; border: 2px solid transparent; border-top-color: currentColor; border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -290,9 +299,15 @@
       border-radius: var(--radius-sm); color: var(--text-secondary);
       transition: all var(--transition); margin-bottom: 4px;
     }
-    .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+    .nav-item:hover {
+      transform: translateY(-3px);
+      background: rgba(255,255,255,0.05);
+      color: var(--text-primary);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28), var(--lift-glow);
+    }
     .nav-item.active { background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(124, 58, 237, 0.1)); color: var(--accent-cyan); border: 1px solid rgba(0, 212, 255, 0.2); }
-    .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; transition: transform var(--lift), filter var(--lift); }
+    .nav-item:hover svg { transform: translateY(-2px); filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.45)); }
     .sidebar-footer { padding: 16px 24px; border-top: 1px solid var(--border-subtle); }
     .readonly-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 20px; font-size: 0.75rem; font-weight: 600; color: var(--warning); }
 
@@ -309,16 +324,29 @@
     .bucket-card {
       background: var(--bg-card); border: 1px solid var(--border-subtle);
       border-radius: var(--radius); padding: 24px;
-      transition: all var(--transition); cursor: pointer; position: relative; overflow: hidden;
+      transition: transform var(--lift), box-shadow var(--lift), border-color var(--transition);
+      cursor: pointer; position: relative;
     }
     .bucket-card::before {
-      content: ''; position: absolute; inset: 0;
+      content: ''; position: absolute; inset: 0; border-radius: inherit;
       background: linear-gradient(135deg, rgba(0, 212, 255, 0.05), transparent);
-      opacity: 0; transition: opacity var(--transition);
+      opacity: 0; transition: opacity var(--transition); pointer-events: none;
     }
-    .bucket-card:hover { transform: translateY(-4px); border-color: rgba(0, 212, 255, 0.3); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); }
+    .bucket-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(0, 212, 255, 0.3);
+      box-shadow: var(--lift-shadow), 0 0 24px rgba(0, 212, 255, 0.16);
+    }
     .bucket-card:hover::before { opacity: 1; }
-    .bucket-icon { width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet)); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+    .bucket-icon {
+      width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+      border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
+      transition: transform var(--lift), box-shadow var(--lift); position: relative; z-index: 1;
+    }
+    .bucket-card:hover .bucket-icon {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.32), 0 0 16px rgba(0, 212, 255, 0.35);
+    }
     .bucket-icon svg { width: 24px; height: 24px; color: white; }
     .bucket-name { font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; position: relative; z-index: 1; }
     .bucket-meta { font-size: 0.8rem; color: var(--text-muted); position: relative; z-index: 1; }
@@ -338,9 +366,15 @@
     .file-table tbody tr { transition: background var(--transition); }
     .file-table tbody tr:hover { background: rgba(255,255,255,0.02); }
     .file-name { display: flex; align-items: center; gap: 12px; }
-    .file-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .file-icon {
+      width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      transition: transform var(--lift), box-shadow var(--lift);
+    }
+    .file-table tbody tr:hover .file-icon { transform: translateY(-3px); }
     .file-icon.folder { background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.1)); color: var(--warning); }
     .file-icon.file { background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1)); color: var(--accent-blue); }
+    .file-table tbody tr:hover .file-icon.folder { box-shadow: 0 8px 14px rgba(0, 0, 0, 0.28), 0 0 12px rgba(245, 158, 11, 0.28); }
+    .file-table tbody tr:hover .file-icon.file { box-shadow: 0 8px 14px rgba(0, 0, 0, 0.28), 0 0 12px rgba(59, 130, 246, 0.32); }
     .file-icon svg { width: 20px; height: 20px; }
     .file-details { min-width: 0; }
     .file-details .name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
@@ -361,7 +395,11 @@
       .sidebar.open { transform: translateX(0); }
       .main-content { margin-left: 0; }
       .mobile-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: var(--bg-card); border-bottom: 1px solid var(--border-subtle); position: sticky; top: 0; z-index: 50; }
-      .menu-toggle { background: none; border: none; color: var(--text-primary); cursor: pointer; padding: 8px; }
+      .menu-toggle {
+        background: none; border: none; color: var(--text-primary); cursor: pointer; padding: 8px; border-radius: 8px;
+        transition: transform var(--lift), box-shadow var(--lift), background var(--transition);
+      }
+      .menu-toggle:hover { transform: translateY(-3px); background: rgba(255,255,255,0.05); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28), var(--lift-glow); }
       .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 90; }
       .overlay.active { display: block; }
     }
