@@ -11,8 +11,8 @@
     padding: 32px 20px;
   }
   .error-card {
-    width: min(520px, 100%);
-    padding: 40px 36px;
+    width: min(560px, 100%);
+    padding: 44px 36px 40px;
     text-align: center;
   }
   .error-card .vault-logo {
@@ -36,15 +36,29 @@
     text-transform: uppercase;
   }
   .error-card h1 {
-    font-size: 1.45rem;
-    line-height: 1.35;
-    margin-bottom: 12px;
+    font-size: clamp(1.7rem, 4vw, 2.15rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.25;
+    margin: 0 0 12px;
+    color: var(--text-primary);
   }
-  .error-message {
+  .error-hint {
     color: var(--text-secondary);
-    font-size: 1rem;
-    line-height: 1.6;
-    margin-bottom: 28px;
+    font-size: 1.12rem;
+    line-height: 1.55;
+    margin: 0 0 22px;
+  }
+  .error-detail {
+    margin: 0 auto 28px;
+    padding: 10px 14px;
+    max-width: 46ch;
+    border-radius: var(--radius-sm);
+    background: rgba(15, 23, 42, 0.45);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.5;
     word-break: break-word;
   }
   .error-actions {
@@ -74,8 +88,11 @@
     <div class="error-kicker">
       {{ status_code }}{% if error_code %} · {{ error_code }}{% endif %}
     </div>
-    <h1>{{ message }}</h1>
-    <p class="error-message">The bucket request did not complete. You can retry this page or return to your approved buckets.</p>
+    <h1>The bucket request did not complete.</h1>
+    <p class="error-hint">You can retry this page or return to your approved buckets.</p>
+    {% if message %}
+    <p class="error-detail">{{ message }}</p>
+    {% endif %}
     <div class="error-actions">
       <a class="btn btn-primary" href="{{ request.url }}">Try again</a>
       <a class="btn btn-secondary" href="{{ url_for('index') }}">All buckets</a>

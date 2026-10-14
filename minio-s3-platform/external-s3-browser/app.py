@@ -1,4 +1,5 @@
 import os
+import re
 from urllib.parse import quote
 
 import boto3
@@ -37,7 +38,6 @@ def filesizeformat(value):
 
 
 MINIO_ENDPOINT = os.environ["MINIO_ENDPOINT"]
-MINIO_AUTH_BUCKET = os.environ["MINIO_AUTH_BUCKET"]
 MINIO_REGION = os.getenv("MINIO_REGION", "us-east-1")
 MINIO_SECURE = MINIO_ENDPOINT.startswith("https://")
 
@@ -45,6 +45,22 @@ APPROVED_BUCKETS = {
     name.strip()
     for name in os.environ["APPROVED_S3_BUCKETS"].split(",")
     if name.strip()
+}
+
+_INVALID_CRED_CODES = {
+    "InvalidAccessKeyId",
+    "SignatureDoesNotMatch",
+    "InvalidClientTokenId",
+    "AuthFailure",
+    "ExpiredToken",
+}
+
+_DENIED_CODES = {
+    "AccessDenied",
+    "Forbidden",
+    "NoSuchBucket",
+    "NotFound",
+    "AllAccessDisabled",
 }
 
 def minio_client(access_key, secret_key):
@@ -82,6 +98,48 @@ def require_login():
         return redirect(url_for("login"))
     return None
 
+
+def _error_code(exc):
+    if isinstance(exc, ClientError):
+        return ((exc.response.get("Error") or {}).get("Code") or "").strip()
+    return ""
+
+
+def resolve_allowed_buckets(client):
+    """Return (allowed_buckets, credentials_valid) using MinIO policies.
+
+    Each approved AWS bucket is allowed only if the same-named MinIO bucket
+    accepts HeadBucket for this user. Invalid credentials fail closed.
+    """
+    allowed = []
+    credentials_valid = False
+    for bucket in sorted(APPROVED_BUCKETS):
+        try:
+            client.head_bucket(Bucket=bucket)
+        except ClientError as exc:
+            code = _error_code(exc)
+            if code in _INVALID_CRED_CODES:
+                return [], False
+            status = (exc.response.get("ResponseMetadata") or {}).get("HTTPStatusCode")
+            if code in _DENIED_CODES or status == 403:
+                credentials_valid = True
+            continue
+        except (BotoCoreError, ValueError):
+            return [], False
+        allowed.append(bucket)
+        credentials_valid = True
+    return allowed, credentials_valid
+
+
+def session_allowed_buckets():
+    stored = session.get("allowed_buckets") or []
+    return {name for name in stored if name in APPROVED_BUCKETS}
+
+
+def require_allowed_bucket(bucket):
+    if bucket not in session_allowed_buckets():
+        abort(404)
+
 _S3_STATUS = {
     "AccessDenied": 403,
     "Forbidden": 403,
@@ -92,6 +150,27 @@ _S3_STATUS = {
     "NotFound": 404,
 }
 
+_ARN_RE = re.compile(r"arn:aws:[^\s\"']+", re.IGNORECASE)
+
+
+def sanitize_aws_message(message):
+    """Strip AWS ARNs so identity details are not shown in the UI."""
+    if not message:
+        return ""
+    text = _ARN_RE.sub("", message)
+    text = text.replace('""', "").replace("''", "")
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"\s+([:,.])", r"\1", text)
+    text = re.sub(r"User:\s+is", "User is", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"on resource:\s+because",
+        "on this resource because",
+        text,
+        flags=re.IGNORECASE,
+    )
+    return text.strip(' :.-"')
+
+
 def s3_error_parts(exc):
     """Return HTTP status, upstream message, and error code for an S3 failure."""
     if isinstance(exc, ClientError):
@@ -101,15 +180,15 @@ def s3_error_parts(exc):
         status = (exc.response.get("ResponseMetadata") or {}).get("HTTPStatusCode")
         if not isinstance(status, int) or not 400 <= status <= 599:
             status = _S3_STATUS.get(code, 502)
-        return status, message, code
-    detail = str(exc).strip()
+        return status, sanitize_aws_message(message), code
+    detail = sanitize_aws_message(str(exc).strip())
     return 502, detail or "Unable to access S3.", ""
 
 def error_page(status_code, message, error_code=""):
     return render_template(
         "error.html",
         status_code=status_code,
-        message=message,
+        message=sanitize_aws_message(message),
         error_code=error_code,
     ), status_code
 
@@ -125,17 +204,18 @@ def login():
 
         try:
             client = minio_client(access_key, secret_key)
-            client.list_objects_v2(
-                Bucket=MINIO_AUTH_BUCKET,
-                MaxKeys=1,
-            )
+            allowed, credentials_valid = resolve_allowed_buckets(client)
         except (ClientError, BotoCoreError, ValueError):
-            flash("Login failed or the account cannot access the validation bucket.")
+            allowed, credentials_valid = [], False
+
+        if not credentials_valid:
+            flash("Login failed. Check your MinIO access key and secret key.")
             return render_template("login.html"), 401
 
         session.clear()
         session["authenticated"] = True
         session["minio_user"] = access_key
+        session["allowed_buckets"] = allowed
         return redirect(url_for("index"))
 
     return render_template("login.html")
@@ -150,15 +230,14 @@ def index():
     result = require_login()
     if result:
         return result
-    return render_template("buckets.html", buckets=sorted(APPROVED_BUCKETS))
+    return render_template("buckets.html", buckets=sorted(session_allowed_buckets()))
 
 @app.route("/bucket/<bucket>")
 def browse(bucket):
     result = require_login()
     if result:
         return result
-    if bucket not in APPROVED_BUCKETS:
-        abort(404)
+    require_allowed_bucket(bucket)
 
     prefix = request.args.get("prefix", "")
     if prefix.startswith("/") or ".." in prefix.split("/"):
@@ -198,8 +277,7 @@ def download(bucket):
     result = require_login()
     if result:
         return result
-    if bucket not in APPROVED_BUCKETS:
-        abort(404)
+    require_allowed_bucket(bucket)
 
     key = request.args.get("key", "")
     if not key or key.startswith("/") or ".." in key.split("/"):
