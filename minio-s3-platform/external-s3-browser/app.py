@@ -82,6 +82,37 @@ def require_login():
         return redirect(url_for("login"))
     return None
 
+_S3_STATUS = {
+    "AccessDenied": 403,
+    "Forbidden": 403,
+    "InvalidAccessKeyId": 403,
+    "SignatureDoesNotMatch": 403,
+    "NoSuchBucket": 404,
+    "NoSuchKey": 404,
+    "NotFound": 404,
+}
+
+def s3_error_parts(exc):
+    """Return HTTP status, upstream message, and error code for an S3 failure."""
+    if isinstance(exc, ClientError):
+        error = exc.response.get("Error") or {}
+        message = (error.get("Message") or "").strip() or "Unable to access S3."
+        code = (error.get("Code") or "").strip()
+        status = (exc.response.get("ResponseMetadata") or {}).get("HTTPStatusCode")
+        if not isinstance(status, int) or not 400 <= status <= 599:
+            status = _S3_STATUS.get(code, 502)
+        return status, message, code
+    detail = str(exc).strip()
+    return 502, detail or "Unable to access S3.", ""
+
+def error_page(status_code, message, error_code=""):
+    return render_template(
+        "error.html",
+        status_code=status_code,
+        message=message,
+        error_code=error_code,
+    ), status_code
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -140,8 +171,9 @@ def browse(bucket):
             Delimiter="/",
             MaxKeys=1000,
         )
-    except ClientError:
-        abort(502)
+    except (ClientError, BotoCoreError) as exc:
+        status, message, code = s3_error_parts(exc)
+        return error_page(status, message, code)
 
     folders = response.get("CommonPrefixes", [])
     objects = [
@@ -198,9 +230,12 @@ def download(bucket):
         },
     )
 
+@app.errorhandler(400)
+@app.errorhandler(403)
+@app.errorhandler(404)
 @app.errorhandler(502)
-def upstream_error(_error):
-    return "Unable to access S3. Check IAM permissions and bucket configuration.", 502
+def http_error(error):
+    return error_page(error.code, error.description or "Request failed.")
 
 if not APPROVED_BUCKETS:
     raise RuntimeError("APPROVED_S3_BUCKETS must contain at least one bucket.")

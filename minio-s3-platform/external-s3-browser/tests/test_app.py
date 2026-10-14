@@ -114,8 +114,9 @@ def test_browse_returns_502_on_aws_error(app_client):
     with patch("app.aws_client", return_value=mock_aws):
         response = client.get("/bucket/approved-one")
 
-    assert response.status_code == 502
-    assert b"Unable to access S3" in response.data
+    assert response.status_code == 403
+    assert b"denied" in response.data
+    assert b"error-card" in response.data
 
 
 def test_browse_rejects_path_traversal(app_client):

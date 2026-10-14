@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ status_code }} - S3 Browser{% endblock %}
+
+{% block head %}
+<style>
+  .error-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+  }
+  .error-card {
+    width: min(520px, 100%);
+    padding: 40px 36px;
+    text-align: center;
+  }
+  .error-card .vault-logo {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 20px;
+  }
+  .error-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.12);
+    color: #fca5a5;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .error-card h1 {
+    font-size: 1.45rem;
+    line-height: 1.35;
+    margin-bottom: 12px;
+  }
+  .error-message {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 28px;
+    word-break: break-word;
+  }
+  .error-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  @media (max-width: 480px) {
+    .error-card { padding: 32px 20px; }
+    .error-actions .btn { width: 100%; }
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<main class="error-page">
+  <section class="error-card glass-card" role="alert">
+    <div class="vault-logo error" aria-hidden="true">
+      <svg class="vault-base" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path class="vault-stroke" d="M24 6L40 14V26L24 34L8 26V14L24 6Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <path class="vault-stroke" d="M8 14L24 22L40 14" stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.7"/>
+        <path class="vault-stroke" d="M24 22V34" stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.7"/>
+        <circle cx="24" cy="18" r="4" stroke="currentColor" stroke-width="0.8" fill="none" opacity="0.7"/>
+      </svg>
+    </div>
+    <div class="error-kicker">
+      {{ status_code }}{% if error_code %} · {{ error_code }}{% endif %}
+    </div>
+    <h1>{{ message }}</h1>
+    <p class="error-message">The bucket request did not complete. You can retry this page or return to your approved buckets.</p>
+    <div class="error-actions">
+      <a class="btn btn-primary" href="{{ request.url }}">Try again</a>
+      <a class="btn btn-secondary" href="{{ url_for('index') }}">All buckets</a>
+    </div>
+  </section>
+</main>
+{% endblock %}
