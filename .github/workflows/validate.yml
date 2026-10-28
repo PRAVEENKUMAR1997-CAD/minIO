@@ -11,6 +11,10 @@ on:
   pull_request:
     branches: [main]
 
+defaults:
+  run:
+    working-directory: minio-s3-platform
+
 jobs:
   validate-yaml:
     name: Validate YAML
@@ -25,13 +29,19 @@ jobs:
       - name: Validate docker-compose.yml
         run: yamllint -d relaxed docker-compose.yml
 
+      - name: Validate docker-compose.s3-browser.yml
+        run: yamllint -d relaxed docker-compose.s3-browser.yml
+
       - name: Validate docker-compose.dhi.yml
+        if: hashFiles('minio-s3-platform/docker-compose.dhi.yml') != ''
         run: yamllint -d relaxed docker-compose.dhi.yml
 
       - name: Validate docker-compose.legacy.yml
+        if: hashFiles('minio-s3-platform/docker-compose.legacy.yml') != ''
         run: yamllint -d relaxed docker-compose.legacy.yml
 
       - name: Validate GitHub Actions
+        working-directory: .
         run: yamllint -d relaxed .github/workflows/*.yml
 
   validate-json:
@@ -82,7 +92,7 @@ jobs:
       - name: Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: Dockerfile
+          dockerfile: minio-s3-platform/Dockerfile
           failure-threshold: warning
 
   validate-compose:
@@ -104,6 +114,9 @@ jobs:
     name: Build Test
     runs-on: ubuntu-latest
     needs: [validate-yaml, validate-json, validate-shell, validate-dockerfile, validate-compose]
+    defaults:
+      run:
+        working-directory: minio-s3-platform
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -142,3 +155,33 @@ jobs:
       - name: Stop services
         if: always()
         run: docker compose down -v
+
+  lint-s3-browser:
+    name: Lint S3 Browser
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: minio-s3-platform/external-s3-browser
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install flake8
+          pip install -r requirements.txt
+
+      - name: Lint with flake8
+        run: flake8 app.py --max-line-length=120 --extend-ignore=E501
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: minio-s3-platform/external-s3-browser/Dockerfile
+          failure-threshold: warning

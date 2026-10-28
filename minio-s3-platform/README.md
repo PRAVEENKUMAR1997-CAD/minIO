@@ -488,6 +488,7 @@ minio-s3-platform/
 │   ├── bootstrap.sh
 │   ├── create-user.sh
 │   ├── create-bucket.sh
+│   ├── deploy.sh
 │   ├── health-check.sh
 │   ├── start.sh
 │   ├── start-with-s3-browser.sh
@@ -504,9 +505,46 @@ minio-s3-platform/
 │   ├── integration.md
 │   └── external-s3-browser.md
 │
-└── .github/
-    └── workflows/
-        └── validate.yml
+└── (see repo root .github/workflows/ for CI/CD)
+```
+
+Repository root:
+
+```
+.github/workflows/
+├── validate.yml    # CI on push/PR
+└── deploy.yml      # CD after main passes validate
+```
+
+## Continuous deployment (CD)
+
+Pushes to **`main`** run **Validate** first; on success, **Deploy** runs automatically (or use **Run workflow** on Deploy manually). If post-deploy health checks fail on the server, **`deploy.sh` rolls back** to the last good containers and the workflow exits failed.
+
+**One-time server setup**
+
+1. Clone repo on the server and configure `minio-s3-platform/.env`.
+2. Run `./scripts/bootstrap.sh` once after first start.
+3. Ensure the deploy user can run Docker without sudo.
+
+**GitHub repository secrets** (Settings → Secrets → Actions):
+
+| Secret | Example |
+|--------|---------|
+| `DEPLOY_HOST` | `203.0.113.10` |
+| `DEPLOY_USER` | `deploy` |
+| `DEPLOY_SSH_KEY` | Private key (PEM) for `DEPLOY_USER` |
+| `DEPLOY_PATH` | `/opt/minIO/minio-s3-platform` (directory containing `scripts/deploy.sh`) |
+
+Optional: create a **production** environment in GitHub for approval gates before deploy.
+
+Ensure production `.env` includes S3 Browser settings: `S3_BROWSER_SECRET_KEY`, `APPROVED_S3_BUCKETS`, and AWS credentials (or instance role).
+
+**Manual deploy on server**
+
+```bash
+cd /path/to/minio-s3-platform
+./scripts/deploy.sh              # MinIO + External S3 Browser
+./scripts/deploy.sh --minio-only # MinIO only
 ```
 
 ## Commands Reference
@@ -514,6 +552,7 @@ minio-s3-platform/
 | Command | Description |
 |---------|-------------|
 | `./scripts/start.sh` | Build, start, and verify |
+| `./scripts/deploy.sh` | Pull, rebuild, roll out MinIO + S3 Browser (use `--minio-only` to skip browser) |
 | `./scripts/stop.sh` | Stop services (preserve data) |
 | `./scripts/reset.sh` | Delete everything (requires confirmation) |
 | `./scripts/health-check.sh` | Verify health status |
